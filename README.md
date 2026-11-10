@@ -59,7 +59,6 @@ src/
 - **Filter values:** live in the URL query string (`useSearchParams`). This way the filtered view can be shared as a link, survives refresh, and works with the back button; copying them into `useState` would create two sources of truth.
 - **Product list:** lives in local state inside `ProductList`, through `useFetch`. It is server data that only this page needs; filtered results and the category list are derived from it during render.
 - **Theme:** lives in `Layout` through `useLocalStorage`. Only the layout wrapper needs the value (the NavBar receives it as a prop), and it has to survive reloads.
-
 ### 2. Context versus store
 
 The user changes only on login/logout, so it is cheap for Context to re-render every consumer when it changes, and Context + reducer needs no extra library. The cart changes on every click; with Context, every component that calls `useContext` would re-render on each change, because Context has no selectors. Zustand lets the NavBar subscribe only to the item count and lets cards subscribe only to `addItem`, so they don't re-render when quantities change. If I swapped them, every "Add to cart" click would re-render all cart consumers (less efficient), and the user state would gain a global store with no real benefit; persisting/subscribing outside React would also be harder with Context.
@@ -83,4 +82,20 @@ On a plain static file server, reloading `/products/3` makes the browser request
 ## Self-study notes
 
 - **Updating one query parameter without losing the others.** From the React Router docs, `setSearchParams` accepts a function that receives the current `URLSearchParams`. In `ProductList.jsx` I copy them with `new URLSearchParams(prev)`, then `set` or `delete` only one key, so changing the category keeps `q`. I pass `{ replace: true }` so typing every letter does not add a new history entry, and I delete empty values to keep URLs clean.
-- **Initialising the store safely from localStorage.** `loadItems()` in `cartStore.js` wraps `getItem` + `JSON.parse` in `try/catch`, returns `[]` when the key is missing, when the JSON is invalid, or
+- **Initialising the store safely from localStorage.** `loadItems()` in `cartStore.js` wraps `getItem` + `JSON.parse` in `try/catch`, returns `[]` when the key is missing, when the JSON is invalid, or when the value is not an array, and filters out items with the wrong shape. From the Zustand docs I used `useCartStore.subscribe((state, prevState) => …)`, which runs outside React; I save only when `state.items !== prevState.items`, which works because updates are immutable.
+- **Light/dark theme.** The theme is applied with a class on the wrapper (`theme-light` / `theme-dark`). Each class defines CSS custom properties (`--bg`, `--text`, `--accent`, …) and all styles use `var(...)`, so changing one class changes all colours.
+- **Zustand selectors.** Zustand compares the selector result with `Object.is`. A selector that returns a new object/array each time would re-render (or loop) on every change, so my selectors return primitives (item count, total) or existing references (`state.items`, actions).
+- **Redirect after login.** `ProtectedRoute` passes the current location in `<Navigate state={{ from: location }} replace />`. `Login` reads it from `useLocation().state` and calls `navigate(from, { replace: true })`, so the login page is not left in history.
+
+## Challenges
+
+- While editing `index.css` I accidentally deleted most of the stylesheet; I noticed it when the product grid had no layout and restored the missing rules in a separate commit.
+- Understanding why `fetch` doesn't reject on 404: I had to check `response.ok` myself so `/products/999999` shows "Product not found".
+- In React StrictMode effects run twice in development, so the first request is aborted; I had to ignore `AbortError` in `useFetch` so it isn't shown as an error.
+- Getting the product id types right (string from the URL vs number from the API).
+- Making the NavBar re-render only when the item count changes, which required a selector that returns a number instead of the whole store.
+- Keeping filters in the URL instead of in `useState`, and updating one parameter without deleting the other.
+
+## Note
+
+Client-side route protection in this project is a user-experience feature, not security.
