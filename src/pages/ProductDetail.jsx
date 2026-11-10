@@ -1,10 +1,13 @@
 import { Link, useNavigate, useParams } from "react-router";
 import useFetch from "../hooks/useFetch.js";
 import { fetchProduct } from "../api/productsApi.js";
+import { useCartStore } from "../store/cartStore.js";
 
 export default function ProductDetail() {
   const { id } = useParams(); // always a STRING, e.g. "3"
   const navigate = useNavigate();
+    const addItem = useCartStore((state) => state.addItem);
+
 
   // [id] as dependency: changing the URL from /products/3 to /products/4 refetches.
   const { loading, error, data: product } = useFetch((signal) => fetchProduct(id, signal), [id]);
@@ -43,6 +46,9 @@ export default function ProductDetail() {
         <strong>Category:</strong> {product.category}
       </p>
       <p className="price">${product.price.toFixed(2)}</p>
+            <button type="button" onClick={() => addItem(product)}>
+        Add to cart
+      </button>
 
       <div className="pager">
         {validId && numericId > 1 && <Link to={`/products/${numericId - 1}`}>← Previous product</Link>}
