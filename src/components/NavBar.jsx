@@ -4,7 +4,7 @@ import { useCartStore, selectItemCount } from "../store/cartStore.js";
 
 const linkClass = ({ isActive }) => (isActive ? "nav-link active" : "nav-link");
 
-export default function NavBar() {
+export default function NavBar({ theme, onToggleTheme }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
     // Selector returns a number, so NavBar re-renders only when the count changes.
@@ -30,6 +30,9 @@ export default function NavBar() {
       </div>
 
       <div className="nav-actions">
+                <button type="button" onClick={onToggleTheme}>
+          {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+        </button>
         {user ? (
           <>
             <span className="username">{user.username}</span>
